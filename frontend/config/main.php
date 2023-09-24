@@ -1,4 +1,7 @@
 <?php
+
+use frontend\components\NotifySubscriber;
+
 $params = array_merge(
     require __DIR__ . '/../../common/config/params.php',
     require __DIR__ . '/../../common/config/params-local.php',
@@ -8,12 +11,14 @@ $params = array_merge(
 
 return [
     'id' => 'app-frontend',
+    'homeUrl' => '/',
     'basePath' => dirname(__DIR__),
-    'bootstrap' => ['log'],
+    'bootstrap' => ['log', 'notifySubscriber'],
     'controllerNamespace' => 'frontend\controllers',
     'components' => [
         'request' => [
             'csrfParam' => '_csrf-frontend',
+            'baseUrl' => '',
         ],
         'user' => [
             'identityClass' => 'common\models\User',
@@ -36,14 +41,15 @@ return [
         'errorHandler' => [
             'errorAction' => 'site/error',
         ],
-        /*
         'urlManager' => [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
             'rules' => [
             ],
         ],
-        */
+        'notifySubscriber' => [
+            'class' => NotifySubscriber::class,
+        ],
     ],
     'params' => $params,
 ];

@@ -2,7 +2,13 @@
 
 namespace frontend\controllers;
 
+use common\models\User;
+use frontend\components\notify\EmailNotify;
+use frontend\components\notify\Notify;
+use frontend\components\notify\SMSNotify;
+use frontend\components\notify\SubscriberNotifyInterface;
 use frontend\models\ResendVerificationEmailForm;
+use frontend\models\Subscriber;
 use frontend\models\VerifyEmailForm;
 use Yii;
 use yii\base\InvalidArgumentException;
@@ -91,7 +97,9 @@ class SiteController extends Controller
 
         $model = new LoginForm();
         if ($model->load(Yii::$app->request->post()) && $model->login()) {
-            return $this->goBack();
+            $smsNotify = new SMSNotify();
+            Notify::send($model->email, $smsNotify, Subscriber::LOGIN);
+            return $this->redirect(['subscriber/index']);
         }
 
         $model->password = '';
@@ -108,7 +116,15 @@ class SiteController extends Controller
      */
     public function actionLogout()
     {
-        Yii::$app->user->logout();
+        $user = Yii::$app->user;
+        $userId = $user->getId();
+        $user->logout();
+
+        $user = User::findIdentity($userId);
+        if ($user !== null) {
+            $emailNotify = new EmailNotify();
+            Notify::send($user->email, $emailNotify, Subscriber::LOGOUT);
+        }
 
         return $this->goHome();
     }
@@ -155,6 +171,8 @@ class SiteController extends Controller
     {
         $model = new SignupForm();
         if ($model->load(Yii::$app->request->post()) && $model->signup()) {
+            $emailNotify = new EmailNotify();
+            Notify::send($model->email, $emailNotify, Subscriber::SIGNUP);
             Yii::$app->session->setFlash('success', 'Thank you for registration. Please check your inbox for verification email.');
             return $this->goHome();
         }
@@ -228,6 +246,8 @@ class SiteController extends Controller
             throw new BadRequestHttpException($e->getMessage());
         }
         if (($user = $model->verifyEmail()) && Yii::$app->user->login($user)) {
+            $emailNotify = new EmailNotify();
+            Notify::send($user->email, $emailNotify, Subscriber::VERIFICATION);
             Yii::$app->session->setFlash('success', 'Your email has been confirmed!');
             return $this->goHome();
         }
